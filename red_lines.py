@@ -150,7 +150,7 @@ class RedLines:
 
         plt.rcParams["figure.figsize"] = (15, 15)
         plt.show()
-        fig.savefig('redlines_graph.png')
+        fig.savefig('redlining/redlines_graph.png')
 
     def generateRandPoint(self):
         """
@@ -375,7 +375,7 @@ class RedLines:
 # Feel free to modify the example main function.
 def main():
     myRedLines = RedLines()
-    myRedLines.createDistricts('redlines_data.json')
+    myRedLines.createDistricts('redlining/redlines_data.json')
     myRedLines.plotDistricts()
     myRedLines.generateRandPoint()
     myRedLines.fetchCensus()
