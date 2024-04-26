@@ -7,6 +7,7 @@ from matplotlib.path import Path
 import matplotlib
 import json
 import os
+import re
 random.seed(17)
 
 class DetroitDistrict:
@@ -105,6 +106,8 @@ class RedLines:
         assign districts attribute to an empty list
         """
         self.districts = []
+        if cacheFile:
+            self.loadCache(cacheFile)
         
 
     def createDistricts(self, fileName):
@@ -289,8 +292,12 @@ class RedLines:
         filename : str
             The name of the file where the district data will be saved.
         """
-        
-        pass
+        districts_data = [district.__dict__ for district in self.districts]
+    
+        with open(fileName, 'w') as file:
+            json.dump(districts_data, file)
+
+        print(f"Data cached to {fileName}")
 
     def loadCache(self, fileName):
         """
@@ -307,7 +314,19 @@ class RedLines:
         bool
             True if the data was successfully loaded, False otherwise.
         """
-        pass
+        try:
+            with open(fileName, 'r') as file:
+                districts_data = json.load(file)
+            
+            self.districts.clear()
+            for data in districts_data:
+                self.districts.append(DetroitDistrict(**data))
+            
+            print(f"Data loaded from {fileName}")
+            return True
+        except Exception as e:
+            print(f"Failed to load data: {e}")
+            return False
 
     def calcIncomeStats(self):
         """
@@ -325,7 +344,21 @@ class RedLines:
         list
             A list containing mean and median income values for each district grade in the order A, B, C, D.
         """
-        pass
+        income_grades = {'A': [], 'B': [], 'C': [], 'D': []}
+        for district in self.districts:
+            if district.medIncome is not None:
+                income_grades[district.holcGrade].append(district.medIncome)
+
+        income_stats = []
+        for grade in ['A', 'B', 'C', 'D']:
+            if income_grades[grade]:
+                mean_income = np.mean(income_grades[grade])
+                median_income = np.median(income_grades[grade])
+                income_stats.extend([round(mean_income), round(median_income)])
+            else:
+                income_stats.extend([0, 0])
+
+        return income_stats
 
 
     def findCommonWords(self):
@@ -355,8 +388,27 @@ class RedLines:
         """
         # List of common filler words to exclude, you could add more if needed.
         filler_words = set(['the', 'of', 'and', 'in', 'to', 'a', 'is', 'for', 'on', 'that'])
+        descriptions = {'A': '', 'B': '', 'C': '', 'D': ''}
+        for district in self.districts:
+            descriptions[district.holcGrade] += ' ' + district.description
+        
+        # Initialize a dictionary to hold word frequencies for each grade
+        common_words = {}
+        for grade, text in descriptions.items():
+            words = re.findall(r'\b\w+\b', text.lower())
+            word_counts = {}
+            for word in words:
+                if word not in filler_words:
+                    if word in word_counts:
+                        word_counts[word] += 1
+                    else:
+                        word_counts[word] = 1
 
-        pass
+            # Sorting words by their counts and extracting the top 10
+            sorted_words = sorted(word_counts.items(), key=lambda item: item[1], reverse=True)
+            common_words[grade] = [word for word, count in sorted_words[:10]]
+
+        return [common_words[grade] for grade in ['A', 'B', 'C', 'D']]
     
     def calcRank(self):
         """
@@ -432,8 +484,8 @@ def main():
     myRedLines.fetchIncome()
     myRedLines.calcRank()  # Assuming you have this method
     myRedLines.calcPopu()  # Assuming you have this method
-    myRedLines.cacheData('redlines_cache.json')
-    myRedLines.loadCache('redlines_cache.json')
+    myRedLines.cacheData('redlining/redlines_cache.json')
+    myRedLines.loadCache('redlining/redlines_cache.json')
     # Add any other function calls as needed
 
 if __name__ == '__main__':
