@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import matplotlib
 import json
 import os
 
@@ -62,7 +65,22 @@ class DetroitDistrict:
 
     """
     def __init__(self, coordinates, holcGrade, id, description, holcColor = None, randomLat=None, randomLong=None, medIncome=None, censusTract=None):
-        pass
+        self.coordinates = coordinates
+        self.holcGrade = holcGrade
+        self.id = id
+        self.description = description
+        self.randomLat = randomLat
+        self.randomLong = randomLong
+        self.medIncome = medIncome
+        self.censusTract = censusTract
+
+        color_map = {
+            'A': 'darkgreen',
+            'B': 'cornflowerblue',
+            'C': 'gold',
+            'D': 'maroon'
+        }
+        self.holcColor = holcColor if holcColor else color_map.get(holcGrade, 'grey')
 
 
 
@@ -82,7 +100,7 @@ class RedLines:
         Initializes the RedLines class without any districts.
         assign districts attribute to an empty list
         """
-        pass
+        self.districts = []
         
 
     def createDistricts(self, fileName):
@@ -104,17 +122,35 @@ class RedLines:
         one of the dict key with only number.
 
         """
-        f = open(fileName)
-        data = json.load(f)
-        f.close()
-        pass
+        with open(fileName, 'r') as f:
+            data = json.load(f)
+        
+        for district_data in data['features']:
+            properties = district_data['properties']
+            coordinates = district_data['geometry']['coordinates'][0]
+            district = DetroitDistrict(
+                coordinates=coordinates[0],
+                holcGrade=properties['holc_grade'],
+                id=properties['holc_id'],
+                description=properties['area_description_data']['8']
+            )
+            self.districts.append(district)
 
     def plotDistricts(self):
         """
         Plots the districts using matplotlib, displaying each district's location and color.
         Name it redlines_graph.png and save it to the current directory. 
         """
-        pass
+        fig, ax = plt.subplots()
+        
+        for district in self.districts: 
+            polygon = patches.Polygon(district.coordinates, closed=True, edgecolor='black', facecolor=district.holcColor)
+            ax.add_patch(polygon)
+            ax.autoscale()
+
+        plt.rcParams["figure.figsize"] = (15, 15)
+        plt.show()
+        fig.savefig('redlines_graph.png')
 
     def generateRandPoint(self):
         """
