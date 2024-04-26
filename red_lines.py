@@ -1,9 +1,12 @@
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.path import Path
 import matplotlib
 import json
 import os
+random.seed(17)
 
 class DetroitDistrict:
     """
@@ -170,7 +173,21 @@ class RedLines:
         This method assumes the 'self.districts' attribute has been populated with DetroitDistrict instances.
 
         """
-        pass
+        xgrid = np.arange(-83.5, -82.8, 0.004)
+        ygrid = np.arange(42.1, 42.6, 0.004)
+        xmesh, ymesh = np.meshgrid(xgrid, ygrid)
+        points = np.vstack((xmesh.flatten(), ymesh.flatten())).T
+
+        for district in self.districts:
+            if isinstance(district.coordinates, list) and all(isinstance(coord, list) and len(coord) == 2 for coord in district.coordinates):
+                polygon_path = Path(district.coordinates)
+                inside_grid = polygon_path.contains_points(points)
+                valid_points = points[inside_grid]
+                if valid_points.size > 0:
+                    point = random.choice(valid_points)
+                    district.randomLong = point[0]
+                    district.randomLat = point[1]
+                    print(district, " : ", point)
   
         
     def fetchCensus(self):
