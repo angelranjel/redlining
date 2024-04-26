@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import requests
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.path import Path
@@ -219,10 +220,20 @@ class RedLines:
         'lat': xxx,'lon': xxx,'censusYear': xxx
 
         """
-
-        
-
-        pass
+        base_url = "https://geo.fcc.gov/api/census/area"
+        for district in self.districts:
+            if district.randomLat is not None and district.randomLong is not None:
+                params = {
+                    'lat': district.randomLat,
+                    'lon': district.randomLong,
+                    'censusYear': '2010',
+                    'format': 'json'
+                }
+                response = requests.get(base_url, params=params)
+                if response.status_code == 200:
+                    data = response.json()
+                    if 'results' in data and len(data['results']) > 0:
+                        district.censusTract = data['results'][0]['block_fips'][2:11]
 
     def fetchIncome(self):
 
@@ -240,8 +251,30 @@ class RedLines:
         is not available or is negative, the median income is set to 0.
 
         """
-        
-        pass
+        state_code = "26"
+        key = "c8f5410605a867435f057525b931e640a5bce297"
+        base_url = "https://api.census.gov/data/2018/acs/acs5"
+        params = {
+            'get': "B19013_001E",
+            'for': 'tract:*',
+            'in': f'state:{state_code}',
+            'key': key
+        }
+
+        response = requests.get(base_url, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            income_data = {item[2] + item[3]: int(item[0]) if item[0] != '-666666666' else 0 for item in data[1:]}
+            print(income_data)
+            for district in self.districts:
+                if district.censusTract in income_data:
+                    district.medIncome = income_data[district.censusTract]
+                    print(f"Updated district {district.id} with median income: {district.medIncome}")
+                else:
+                    district.medIncome = 0
+                    print(f"No data available for district {district.id}, setting median income to 0")
+        else:
+            print(f"Failed to fetch income data with status code {response.status_code}: {response.text}")
 
     def cacheData(self, fileName):
         """
